@@ -1,0 +1,20 @@
+SECTION Graph
+Nodes 9
+Edges 14
+E v1 v2 8
+E v1 v3 9
+E v4 v5 2
+E v1 u1 1
+E v4 u1 1
+END
+
+SECTION Terminals
+Terminals 5
+T v1
+T v2
+T v3
+T v4
+T v5
+END
+
+EOF
