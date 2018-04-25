@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 M = 1000
+T = 100
+K = 3
 
 
 def readfile(filename):
@@ -69,12 +71,57 @@ class SteinerGraphe:
             individu = []
             for j in range(len(self.free)):
                 individu.append(1) if random.random() < p else individu.append(0)
-            population.append(individu)
-        self.population = population
-        return population
+            if individu not in population:
+                population.append(individu)
+        self.population = self.population_sorted(population)
+        return self.population
 
+    def new_generation(self, type='g'):
+        old_pop = []
+        for i in self.population:
+            if i[1] <= self.population[0][1]:
+                old_pop.append(i)
+        new_pop = []
+        if len(old_pop) == 1:
+            for i in range(T):
+                m = mutation(old_pop[0][0])
+                if m not in new_pop:
+                    new_pop.append(m)
+        else:
+            for i in range(len(old_pop)):
+                for j in range(i + 1, len(old_pop)):
+                    for k in range(len(self.free)):
+                        child = croisement_point(old_pop[i][0], old_pop[j][0], k)
+                        if child not in new_pop:
+                            new_pop.append(child)
+        if type == 'g': # generational
+            self.population = self.population_sorted(new_pop)
+        else:  # elitist
+            for i in old_pop:
+                if i[0] not in new_pop:
+                    new_pop.append(i[0])
+            sort = self.population_sorted(new_pop)
+            self.population = []
+            for i in sort:
+                if i[1] <= sort[0][1]:
+                    if i not in self.population:
+                        self.population.append(i)
+        return self.population
 
-# TODO: 1.3 non traité !
+    def heuristic(self):
+        old_pop = self.population
+        print(old_pop)
+        old_score = old_pop[0][1]
+        new_pop = self.new_generation(type='e')
+        print(new_pop)
+        new_score = new_pop[0][1]
+        while old_score != new_score:
+            old_score = new_score
+            for i in range(K):
+                new_pop = self.new_generation(type='e')
+                new_score = new_pop[0][1]
+                print(new_pop)
+
 
 def mutation(chaine):
     new = []
@@ -97,12 +144,10 @@ def croisement_point(parent1, parent2, p_rdv):
     return enfant
 
 
-g, t = readfile("test.gr")
+g, t = readfile("B/b02.stp")
 ex = SteinerGraphe(g, t)
 # ex.draw()
 # a,b,_=ex.fitness([1, 1, 0, 0])
 
-gen = ex.generate(4, 0.5)
-print(ex.population_sorted(gen))
-
-# print(croisement_point([0,1,1,0,0],[0,0,0,1,1],3))
+ex.generate(4, 0.5)
+ex.heuristic()
