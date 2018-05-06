@@ -28,7 +28,7 @@ class SteinerGraphe:
     def __init__(self, graph: nx.Graph, terminaux: list):
         self.graph = graph
         self.terminaux = sorted(terminaux)
-        self.free = [x for x in sorted(self.graph.nodes) if x not in self.terminaux]
+        self.free = sorted([x for x in sorted(self.graph.nodes) if x not in self.terminaux])
         self.population = []
 
     def fitness(self, chaine):
@@ -36,6 +36,7 @@ class SteinerGraphe:
             raise Exception('Codedage invalide')
         new = nx.Graph()
         weight = 0
+        new.add_nodes_from(self.terminaux)
         # kruskal procedure
         for a, b, data in sorted(self.graph.edges(data=True), key=lambda x: x[2]['weight']):
             # print (a,b,data['weight'])
@@ -55,7 +56,11 @@ class SteinerGraphe:
             return new, weight + M * (new.number_of_nodes() - 1 - new.number_of_edges()), False
 
     def draw(self):
-        nx.draw_networkx(self.graph, with_labels=True)
+        dict = {}
+        for node in self.terminaux:
+            dict[node] = 1
+        values = [dict.get(node, 0.5) for node in self.graph.nodes()]
+        nx.draw_networkx(self.graph, with_labels=True, node_color=values)
         plt.show()
 
     def population_sorted(self, population):
@@ -135,6 +140,16 @@ class SteinerGraphe:
                 new_pop = self.new_generation(parent=True,type=True)
                 new_score = new_pop[0][1]
                 print(new_pop)
+        self.draw_individu(new_pop[0][0])
+
+    def draw_individu(self,individu):
+        graph, _, _ = self.fitness(individu)
+        dict = {}
+        for node in self.terminaux:
+            dict[node] = 1
+        values = [dict.get(node, 0.5) for node in graph.nodes()]
+        nx.draw_networkx(graph, with_labels=True, node_color=values)
+        plt.show()
 
 
 def mutation(chaine):
@@ -160,6 +175,7 @@ def croisement_point(parent1, parent2, p_rdv):
 
 g, t = readfile("B/b01.stp")
 ex = SteinerGraphe(g, t)
+ex.draw()
 # ex.draw()
 # a,b,_=ex.fitness([1, 1, 0, 0])
 
