@@ -243,7 +243,7 @@ class SteinerGraphe:
         return self.eliminate(self.couvrant(self.remplacement(self.couvrant(self.terminaux_complets()))))
 
     # Heuristique de l’arbre couvrant minimum 2.2
-    def cover_min(self):
+    def heuristic_cover_min(self):
         graph = self.couvrant(self.graph)
         change = True
         while change:
@@ -269,7 +269,7 @@ g, t = readfile("B/b01.stp")
 ex = SteinerGraphe(g, t)
 ex.draw()
 ex.heuristic_PCC()
-ex.cover_min()
+ex.heuristic_cover_min()
 
 # ex.draw()
 # a,b,_=ex.fitness([1, 1, 0, 0])$
