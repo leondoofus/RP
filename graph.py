@@ -24,12 +24,43 @@ def readfile(filename):
     return G, T
 
 
+def mutation(chaine):
+    new = []
+    for char in chaine:
+        if random.random() < 0.05:
+            new.append((char + 1) % 2)
+        else:
+            new.append(char)
+    return new
+
+
+def croisement_point(parent1, parent2):
+    p_rdv = int(len(parent1) / 2)
+    enfant = []
+    for i in range(p_rdv):
+        enfant.append(parent1[i])
+    for i in range(p_rdv, len(parent2)):
+        enfant.append(parent2[i])
+    return enfant
+
+
+def print_graph(root, graph):
+    dict = {}
+    for node in root.terminaux:
+        dict[node] = 1
+    values = [dict.get(node, 0.5) for node in graph.nodes()]
+    nx.draw_networkx(graph, with_labels=True, node_color=values)
+    plt.show()
+
+
 class SteinerGraphe:
     def __init__(self, graph: nx.Graph, terminaux: list):
         self.graph = graph
         self.terminaux = sorted(terminaux)
         self.free = sorted([x for x in sorted(self.graph.nodes) if x not in self.terminaux])
         self.population = []
+
+    # Algorithme genetique
 
     def fitness(self, chaine):
         if len(self.free) != len(chaine):
@@ -77,10 +108,14 @@ class SteinerGraphe:
             individu = []
             for j in range(len(self.free)):
                 individu.append(1) if random.random() < p else individu.append(0)
-            if individu not in population:
-                population.append(individu)
+            while individu in population:
+                individu = []
+                for j in range(len(self.free)):
+                    individu.append(1) if random.random() < p else individu.append(0)
+            # if individu not in population:
+            population.append(individu)
         self.population = self.population_sorted(population)
-        if len(self.population) == 0: #pour etre sur d'avoir une solution realisable
+        if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
             self.population = self.population_sorted([[1 for i in range(len(self.free))]])
         return self.population
 
@@ -88,11 +123,11 @@ class SteinerGraphe:
         old_pop = []
         best_score = self.population[0][1]
         for i in self.population:
-            if not parent: # meilleurs parents
+            if not parent:  # meilleurs parents
                 if i[1] <= self.population[0][1]:
                     old_pop.append(i)
             else:
-                note = float(best_score)/i[1]
+                note = float(best_score) / i[1]
                 if random.random() < note:
                     old_pop.append(i)
         new_pop = []
@@ -107,18 +142,19 @@ class SteinerGraphe:
                     child = croisement_point(old_pop[i][0], old_pop[j][0])
                     if child not in new_pop:
                         new_pop.append(child)
-        if not type: # generational
+        if not type:  # generational
             self.population = self.population_sorted(new_pop)
         else:  # elitist
             new_pop_score = self.population_sorted(new_pop)
-            best_score = min(self.population[0][1], new_pop_score[0][1]) if len(new_pop_score) > 0 else self.population[0][1]
+            best_score = min(self.population[0][1], new_pop_score[0][1]) if len(new_pop_score) > 0 else \
+                self.population[0][1]
             final_pop = []
             for i in self.population:
-                if random.random() < float(best_score)/i[1]:
+                if random.random() < float(best_score) / i[1]:
                     if i[0] not in final_pop:
                         final_pop.append(i[0])
             for i in new_pop_score:
-                if random.random() < float(best_score)/i[1]:
+                if random.random() < float(best_score) / i[1]:
                     if i[0] not in final_pop:
                         final_pop.append(i[0])
             self.population = self.population_sorted(final_pop)
@@ -134,10 +170,10 @@ class SteinerGraphe:
         old_pop = self.population
         print(old_pop)
         old_score = old_pop[0][1]
-        new_pop = self.new_generation(parent=True,type=True)
+        new_pop = self.new_generation(parent=True, type=True)
         print(new_pop)
         new_score = new_pop[0][1]
-        while old_score == new_score :
+        while old_score == new_score:
             old_score = new_score
             for i in range(K):
                 new_pop = self.new_generation(parent=True, type=True)
@@ -148,12 +184,12 @@ class SteinerGraphe:
         while old_score != new_score:
             old_score = new_score
             for i in range(K):
-                new_pop = self.new_generation(parent=True,type=True)
+                new_pop = self.new_generation(parent=True, type=True)
                 new_score = new_pop[0][1]
                 print(new_pop)
         self.draw_individu(new_pop[0][0])
 
-    def draw_individu(self,individu):
+    def draw_individu(self, individu):
         graph, _, _ = self.fitness(individu)
         dict = {}
         for node in self.terminaux:
@@ -162,32 +198,64 @@ class SteinerGraphe:
         nx.draw_networkx(graph, with_labels=True, node_color=values)
         plt.show()
 
+    # Heuristique du plus court chemin
+    def terminaux_complets(self):  # 2.1.1
+        new = nx.Graph()
+        new.add_nodes_from(self.terminaux)
+        for i in range(len(self.terminaux)):
+            for j in range(i + 1, len(self.terminaux)):
+                if self.graph.has_edge(self.terminaux[i], self.terminaux[j]):
+                    new.add_edge(self.terminaux[i], self.terminaux[j],
+                                 weight=self.graph.get_edge_data(self.terminaux[i], self.terminaux[j])['weight'])
+                else:
+                    w, _ = nx.single_source_dijkstra(ex.graph, self.terminaux[i], target=self.terminaux[j],
+                                                     weight='weight')
+                    new.add_edge(self.terminaux[i], self.terminaux[j], weight=w)
+        # print_graph(self,new)
+        return new
 
-def mutation(chaine):
-    new = []
-    for char in chaine:
-        if random.random() < 0.05:
-            new.append((char + 1) % 2)
-        else:
-            new.append(char)
-    return new
+    def couvrant(self, terminaux_complets):  # 2.1.2, 2.1.4
+        new = nx.minimum_spanning_tree(terminaux_complets, 'weight')
+        # print_graph(self, new)
+        return new
+
+    def remplacement(self, couvrant):  # 2.1.3
+        new = nx.Graph()
+        for a, b, data in sorted(couvrant.edges(data=True), key=lambda x: x[2]['weight']):
+            if self.graph.has_edge(a, b):
+                new.add_edge(a, b, weight=data['weight'])
+            else:
+                _, path = nx.single_source_dijkstra(ex.graph, a, target=b, weight='weight')
+                for i in range(len(path) - 1):
+                    new.add_edge(path[i], path[i + 1], weight=self.graph.get_edge_data(path[i], path[i + 1])['weight'])
+        print_graph(self, new)
+        weight = 0
+        for _, _, data in sorted(new.edges(data=True), key=lambda x: x[2]['weight']):
+            weight += data['weight']
+        print(weight)
+        return new
+
+    def eliminate(self, graph):  # 2.1.5
+        for node in graph.nodes:
+            if node in self.free and graph.degree(node) == 1:
+                graph.remove_node(node)
+        print_graph(self, graph)
+        weight = 0
+        for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
+            weight += data['weight']
+        print(weight)
+        return graph
+
+    # Heuristique de l’arbre couvrant minimum 2.2
 
 
-def croisement_point(parent1, parent2):
-    p_rdv = int(len(parent1)/2)
-    enfant = []
-    for i in range(p_rdv):
-        enfant.append(parent1[i])
-    for i in range(p_rdv, len(parent2)):
-        enfant.append(parent2[i])
-    return enfant
-
-
-g, t = readfile("B/b05.stp")
+g, t = readfile("B/b10.stp")
 ex = SteinerGraphe(g, t)
-#ex.draw()
-# ex.draw()
-# a,b,_=ex.fitness([1, 1, 0, 0])
+ex.draw()
+c = ex.couvrant(ex.remplacement(ex.couvrant(ex.terminaux_complets())))
+ex.eliminate(c)
 
-ex.generate(N, 0.5)
-ex.heuristic()
+# ex.draw()
+# a,b,_=ex.fitness([1, 1, 0, 0])$
+# ex.generate(N, 0.5)
+# ex.heuristic()
