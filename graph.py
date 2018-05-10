@@ -44,15 +44,6 @@ def croisement_point(parent1, parent2):
     return enfant
 
 
-def print_graph(root, graph):
-    dict = {}
-    for node in root.terminaux:
-        dict[node] = 1
-    values = [dict.get(node, 0.5) for node in graph.nodes()]
-    nx.draw_networkx(graph, with_labels=True, node_color=values)
-    plt.show()
-
-
 class SteinerGraphe:
     def __init__(self, graph: nx.Graph, terminaux: list):
         self.graph = graph
@@ -92,6 +83,14 @@ class SteinerGraphe:
             dict[node] = 1
         values = [dict.get(node, 0.5) for node in self.graph.nodes()]
         nx.draw_networkx(self.graph, with_labels=True, node_color=values)
+        plt.show()
+
+    def draw_sousgraph(self, graph):
+        dict = {}
+        for node in self.terminaux:
+            dict[node] = 1
+        values = [dict.get(node, 0.5) for node in graph.nodes()]
+        nx.draw_networkx(graph, with_labels=True, node_color=values)
         plt.show()
 
     def population_sorted(self, population):
@@ -166,7 +165,7 @@ class SteinerGraphe:
                         self.population.append(i)'''
         return self.population
 
-    def heuristic(self):
+    def heuristic_genetic(self):
         old_pop = self.population
         print(old_pop)
         old_score = old_pop[0][1]
@@ -211,12 +210,10 @@ class SteinerGraphe:
                     w, _ = nx.single_source_dijkstra(ex.graph, self.terminaux[i], target=self.terminaux[j],
                                                      weight='weight')
                     new.add_edge(self.terminaux[i], self.terminaux[j], weight=w)
-        # print_graph(self,new)
         return new
 
-    def couvrant(self, terminaux_complets):  # 2.1.2, 2.1.4
-        new = nx.minimum_spanning_tree(terminaux_complets, 'weight')
-        # print_graph(self, new)
+    def couvrant(self, graph):  # 2.1.2, 2.1.4
+        new = nx.minimum_spanning_tree(graph, 'weight')
         return new
 
     def remplacement(self, couvrant):  # 2.1.3
@@ -228,32 +225,51 @@ class SteinerGraphe:
                 _, path = nx.single_source_dijkstra(ex.graph, a, target=b, weight='weight')
                 for i in range(len(path) - 1):
                     new.add_edge(path[i], path[i + 1], weight=self.graph.get_edge_data(path[i], path[i + 1])['weight'])
-        print_graph(self, new)
-        weight = 0
-        for _, _, data in sorted(new.edges(data=True), key=lambda x: x[2]['weight']):
-            weight += data['weight']
-        print(weight)
+        # self.draw_sousgraph(new)
         return new
 
     def eliminate(self, graph):  # 2.1.5
         for node in graph.nodes:
             if node in self.free and graph.degree(node) == 1:
                 graph.remove_node(node)
-        print_graph(self, graph)
+        self.draw_sousgraph(graph)
         weight = 0
         for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
             weight += data['weight']
         print(weight)
         return graph
 
+    def heuristic_PCC(self):
+        return self.eliminate(self.couvrant(self.remplacement(self.couvrant(self.terminaux_complets()))))
+
     # Heuristique de l’arbre couvrant minimum 2.2
+    def cover_min(self):
+        graph = self.couvrant(self.graph)
+        change = True
+        while change:
+            change = False
+            tmp = []
+            for node in graph.nodes:
+                if node in self.free and graph.degree(node) == 1:
+                    tmp.append(node)
+            if len(tmp) > 0:
+                for node in tmp:
+                   graph.remove_node(node)
+                change = True
+        self.draw_sousgraph(graph)
+        weight = 0
+        for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
+            weight += data['weight']
+        print(weight)
+        return graph
 
 
-g, t = readfile("B/b10.stp")
+
+g, t = readfile("B/b01.stp")
 ex = SteinerGraphe(g, t)
 ex.draw()
-c = ex.couvrant(ex.remplacement(ex.couvrant(ex.terminaux_complets())))
-ex.eliminate(c)
+ex.heuristic_PCC()
+ex.cover_min()
 
 # ex.draw()
 # a,b,_=ex.fitness([1, 1, 0, 0])$
