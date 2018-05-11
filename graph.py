@@ -254,7 +254,7 @@ class SteinerGraphe:
                     tmp.append(node)
             if len(tmp) > 0:
                 for node in tmp:
-                   graph.remove_node(node)
+                    graph.remove_node(node)
                 change = True
         self.draw_sousgraph(graph)
         weight = 0
@@ -263,15 +263,58 @@ class SteinerGraphe:
         print(weight)
         return graph
 
+    # Randomisation des heuristiques de construction 2.3
+    def graph_to_individu(self, graph):
+        individu = []
+        for node in self.free:
+            if node in graph.nodes():
+                individu.append(1)
+            else:
+                individu.append(0)
+        return individu
+
+    def random_graph(self):
+        graph = self.graph.copy()
+        for a, b in graph.edges:
+            if random.randint(0, 1) == 1:
+                graph[a][b]['weight'] += graph[a][b]['weight'] * random.uniform(0.05, 0.2)
+            else:
+                graph[a][b]['weight'] -= graph[a][b]['weight'] * random.uniform(0.05, 0.2)
+        return graph
+
+    def random_individu_from_PCC(self):
+        graph = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_PCC()
+        return self.graph_to_individu(graph)
+
+    def random_individu_from_cover_min(self):
+        graph = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_cover_min()
+        return self.graph_to_individu(graph)
+
+    def generate_randomisation(self, num_individu):
+        population = []
+        for i in range(int(num_individu / 2)):
+            i1 = self.random_individu_from_PCC()
+            i2 = self.random_individu_from_cover_min()
+            if i1 not in population:
+                population.append(i1)
+            if i2 not in population:
+                population.append(i2)
+        self.population = self.population_sorted(population)
+        if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
+            self.population = self.population_sorted([[1 for i in range(len(self.free))]])
+        return self.population
 
 
-g, t = readfile("B/b01.stp")
+g, t = readfile("B/b03.stp")
 ex = SteinerGraphe(g, t)
-ex.draw()
-ex.heuristic_PCC()
-ex.heuristic_cover_min()
+# ex.draw()
 
 # ex.draw()
 # a,b,_=ex.fitness([1, 1, 0, 0])$
 # ex.generate(N, 0.5)
 # ex.heuristic()
+
+ex.generate_randomisation(N)
+ex.heuristic_genetic()
+ex.heuristic_PCC()
+ex.heuristic_cover_min()
