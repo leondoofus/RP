@@ -5,8 +5,9 @@ import networkx as nx
 
 M = 1000
 T = 100
-K = 3
-N = 30
+K = 1
+N = 10
+P = 0.5  # 0.2 < p < 0.5
 
 
 def readfile(filename):
@@ -52,16 +53,15 @@ class SteinerGraphe:
         self.population = []
 
     # Algorithme genetique
-
+    # 1.2 Fitness
     def fitness(self, chaine):
         if len(self.free) != len(chaine):
             raise Exception('Codedage invalide')
         new = nx.Graph()
         weight = 0
         new.add_nodes_from(self.terminaux)
-        # kruskal procedure
+        # Kruskal procedure
         for a, b, data in sorted(self.graph.edges(data=True), key=lambda x: x[2]['weight']):
-            # print (a,b,data['weight'])
             if not ((a in self.free and chaine[self.free.index(a)] == 0) or (
                     b in self.free and chaine[self.free.index(b)] == 0)):
                 new.add_edge(a, b, weight=data['weight'])
@@ -69,9 +69,6 @@ class SteinerGraphe:
                 if nx.algorithms.cycles.cycle_basis(new):
                     new.remove_edge(a, b)
                     weight -= data['weight']
-        # print(weight)
-        # nx.draw_networkx(new, with_labels=True)
-        # plt.show()
         if nx.algorithms.components.is_connected(new):  # connexe
             return new, weight, True
         else:
@@ -101,16 +98,17 @@ class SteinerGraphe:
                 pop.append((individu, w))
         return sorted(pop, key=lambda x: x[1])
 
-    def generate(self, num_individu, p):  # 0.2 < p < 0.5
+    def generate(self):
         population = []
-        for i in range(num_individu):
+        n = min(N, pow(2, len(self.free)))
+        for i in range(n):
             individu = []
             for j in range(len(self.free)):
-                individu.append(1) if random.random() < p else individu.append(0)
+                individu.append(1) if random.random() < P else individu.append(0)
             while individu in population:
                 individu = []
                 for j in range(len(self.free)):
-                    individu.append(1) if random.random() < p else individu.append(0)
+                    individu.append(1) if random.random() < P else individu.append(0)
             # if individu not in population:
             population.append(individu)
         self.population = self.population_sorted(population)
@@ -119,6 +117,10 @@ class SteinerGraphe:
         return self.population
 
     def new_generation(self, parent=False, type=False):
+        """
+        :param parent: True for best parents, False for selection by probability
+        :param type: True for Elitist, False for Generationnal
+        """
         old_pop = []
         best_score = self.population[0][1]
         for i in self.population:
@@ -165,28 +167,30 @@ class SteinerGraphe:
                         self.population.append(i)'''
         return self.population
 
-    def heuristic_genetic(self):
+    def algorithm_genetic(self, parent=False, type=False):
+        self.generate()
         old_pop = self.population
-        print(old_pop)
+        # print(old_pop)
         old_score = old_pop[0][1]
-        new_pop = self.new_generation(parent=True, type=True)
-        print(new_pop)
+        new_pop = self.new_generation(parent=parent, type=type)
+        # print(new_pop)
         new_score = new_pop[0][1]
         while old_score == new_score:
             old_score = new_score
             for i in range(K):
-                new_pop = self.new_generation(parent=True, type=True)
+                new_pop = self.new_generation(parent=parent, type=type)
                 new_score = new_pop[0][1]
-                print(new_pop)
+                # print(new_pop)
             if old_score == new_score:
                 break
         while old_score != new_score:
             old_score = new_score
             for i in range(K):
-                new_pop = self.new_generation(parent=True, type=True)
+                new_pop = self.new_generation(parent=parent, type=type)
                 new_score = new_pop[0][1]
-                print(new_pop)
-        self.draw_individu(new_pop[0][0])
+                # print(new_pop)
+        # self.draw_individu(new_pop[0][0])
+        return new_pop[0]
 
     def draw_individu(self, individu):
         graph, _, _ = self.fitness(individu)
@@ -207,7 +211,7 @@ class SteinerGraphe:
                     new.add_edge(self.terminaux[i], self.terminaux[j],
                                  weight=self.graph.get_edge_data(self.terminaux[i], self.terminaux[j])['weight'])
                 else:
-                    w, _ = nx.single_source_dijkstra(ex.graph, self.terminaux[i], target=self.terminaux[j],
+                    w, _ = nx.single_source_dijkstra(self.graph, self.terminaux[i], target=self.terminaux[j],
                                                      weight='weight')
                     new.add_edge(self.terminaux[i], self.terminaux[j], weight=w)
         return new
@@ -222,7 +226,7 @@ class SteinerGraphe:
             if self.graph.has_edge(a, b):
                 new.add_edge(a, b, weight=data['weight'])
             else:
-                _, path = nx.single_source_dijkstra(ex.graph, a, target=b, weight='weight')
+                _, path = nx.single_source_dijkstra(self.graph, a, target=b, weight='weight')
                 for i in range(len(path) - 1):
                     new.add_edge(path[i], path[i + 1], weight=self.graph.get_edge_data(path[i], path[i + 1])['weight'])
         # self.draw_sousgraph(new)
@@ -232,12 +236,12 @@ class SteinerGraphe:
         for node in graph.nodes:
             if node in self.free and graph.degree(node) == 1:
                 graph.remove_node(node)
-        self.draw_sousgraph(graph)
+        # self.draw_sousgraph(graph)
         weight = 0
         for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
             weight += data['weight']
-        print(weight)
-        return graph
+        # print(weight)
+        return graph, weight
 
     def heuristic_PCC(self):
         return self.eliminate(self.couvrant(self.remplacement(self.couvrant(self.terminaux_complets()))))
@@ -256,12 +260,12 @@ class SteinerGraphe:
                 for node in tmp:
                     graph.remove_node(node)
                 change = True
-        self.draw_sousgraph(graph)
+        # self.draw_sousgraph(graph)
         weight = 0
         for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
             weight += data['weight']
-        print(weight)
-        return graph
+        # print(weight)
+        return graph, weight
 
     # Randomisation des heuristiques de construction 2.3
     def graph_to_individu(self, graph):
@@ -283,16 +287,16 @@ class SteinerGraphe:
         return graph
 
     def random_individu_from_PCC(self):
-        graph = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_PCC()
+        graph, _ = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_PCC()
         return self.graph_to_individu(graph)
 
     def random_individu_from_cover_min(self):
-        graph = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_cover_min()
+        graph, _ = SteinerGraphe(self.random_graph(), self.terminaux).heuristic_cover_min()
         return self.graph_to_individu(graph)
 
-    def generate_randomisation(self, num_individu):
+    def generate_randomisation(self):
         population = []
-        for i in range(int(num_individu / 2)):
+        for i in range(int(N / 2)):
             i1 = self.random_individu_from_PCC()
             i2 = self.random_individu_from_cover_min()
             if i1 not in population:
@@ -302,19 +306,49 @@ class SteinerGraphe:
         self.population = self.population_sorted(population)
         if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
             self.population = self.population_sorted([[1 for i in range(len(self.free))]])
-        return self.population
+        return self.population[0]
+
+    # 3. Recherche locale
+    def recherche_locale(self):
+        individu, score = self.generate()[0]
+        change = True
+        while change:
+            change = False
+            new_pop = []
+            for i in range(len(self.free)):
+                if individu[i] == 1:
+                    if (self.graph.degree(self.free[i])) == 1:
+                        new = list(individu)
+                        new[i] = 0
+                        new_pop.append(new)
+                    else:
+                        new = list(individu)
+                        new[i] = 0
+                        _, _, b = self.fitness(new)
+                        if b:
+                            new_pop.append(new)
+                else:
+                    if (self.graph.degree(self.free[i])) != 1:
+                        new = list(individu)
+                        new[i] = 1
+                        _, _, b = self.fitness(new)
+                        if b:
+                            new_pop.append(new)
+            if len(new_pop) > 0:
+                pop = self.population_sorted(new_pop)
+                if (pop[0][1] < score):
+                    change = True
+                    individu, score = pop[0]
+        # print(individu, score)
+        return individu, score
 
 
-g, t = readfile("B/b03.stp")
-ex = SteinerGraphe(g, t)
-# ex.draw()
-
-# ex.draw()
-# a,b,_=ex.fitness([1, 1, 0, 0])$
-# ex.generate(N, 0.5)
-# ex.heuristic()
-
-ex.generate_randomisation(N)
-ex.heuristic_genetic()
-ex.heuristic_PCC()
-ex.heuristic_cover_min()
+i = str(1)
+# g, t = readfile("B/b0" + i + ".stp")
+g, t = readfile("test.gr")
+sg = SteinerGraphe(g, t)
+print(sg.algorithm_genetic(True, True))
+print(sg.heuristic_PCC())
+print(sg.heuristic_cover_min())
+print(sg.generate_randomisation())
+print(sg.recherche_locale())
