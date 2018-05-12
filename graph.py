@@ -54,6 +54,16 @@ class SteinerGraphe:
         self.free = sorted([x for x in sorted(self.graph.nodes) if x not in self.terminaux])
         self.population = []
 
+    def weight(self, graph):
+        weight = 0
+        for _, _, data in graph.edges(data=True):
+            weight += data['weight']
+        return weight
+
+    def couvrant(self, graph):
+        new = nx.minimum_spanning_tree(graph, 'weight')
+        return new
+
     # Algorithme genetique
     # 1.2 Fitness
     def fitness(self, chaine):
@@ -61,22 +71,16 @@ class SteinerGraphe:
             print(self.free)
             print(chaine)
             raise Exception('Codedage invalide')
-        new = nx.Graph()
-        weight = 0
-        new.add_nodes_from(self.terminaux)
         # Kruskal procedure
-        for a, b, data in sorted(self.graph.edges(data=True), key=lambda x: x[2]['weight']):
-            if not ((a in self.free and chaine[self.free.index(a)] == 0) or (
-                    b in self.free and chaine[self.free.index(b)] == 0)):
-                new.add_edge(a, b, weight=data['weight'])
-                weight += data['weight']
-                if nx.algorithms.cycles.cycle_basis(new):
-                    new.remove_edge(a, b)
-                    weight -= data['weight']
-        if nx.algorithms.components.is_connected(new):  # connexe
-            return new, weight, True
+        graph = self.graph.copy()
+        for i in range(len(self.free)):
+            if chaine[i] == 0:
+                graph.remove_node(self.free[i])
+        self.couvrant(graph)
+        if nx.algorithms.components.is_connected(graph):  # connexe
+            return graph, self.weight(graph), True
         else:
-            return new, weight + M * (new.number_of_nodes() - 1 - new.number_of_edges()), False
+            return graph, self.weight(graph) + M * (graph.number_of_nodes() - 1 - graph.number_of_edges()), False
 
     def draw(self):
         dict = {}
@@ -113,7 +117,6 @@ class SteinerGraphe:
                 individu = []
                 for j in range(len(self.free)):
                     individu.append(1) if random.random() < P else individu.append(0)
-            # if individu not in population:
             population.append(individu)
         self.population = self.population_sorted(population)
         if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
@@ -172,10 +175,10 @@ class SteinerGraphe:
     def algorithm_genetic(self, parent=False, type=False):
         self.generate()
         old_pop = self.population
-        # print(old_pop)
+        print(old_pop)
         old_score = old_pop[0][1]
         new_pop = self.new_generation(parent=parent, type=type)
-        # print(new_pop)
+        print(new_pop)
         new_score = new_pop[0][1]
         while old_score == new_score:
             old_score = new_score
@@ -190,7 +193,7 @@ class SteinerGraphe:
             for i in range(K):
                 new_pop = self.new_generation(parent=parent, type=type)
                 new_score = new_pop[0][1]
-        # self.draw_individu(new_pop[0][0])
+        self.draw_individu(new_pop[0][0])
         return new_pop[0]
 
     def draw_individu(self, individu):
@@ -217,10 +220,6 @@ class SteinerGraphe:
                     new.add_edge(self.terminaux[i], self.terminaux[j], weight=w)
         return new
 
-    def couvrant(self, graph):  # 2.1.2, 2.1.4
-        new = nx.minimum_spanning_tree(graph, 'weight')
-        return new
-
     def remplacement(self, couvrant):  # 2.1.3
         new = nx.Graph()
         for a, b, data in sorted(couvrant.edges(data=True), key=lambda x: x[2]['weight']):
@@ -238,11 +237,7 @@ class SteinerGraphe:
             if node in self.free and graph.degree(node) == 1:
                 graph.remove_node(node)
         # self.draw_sousgraph(graph)
-        weight = 0
-        for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
-            weight += data['weight']
-        # print(weight)
-        return graph, weight
+        return graph, self.weight(graph)
 
     def heuristic_PCC(self):
         return self.eliminate(self.couvrant(self.remplacement(self.couvrant(self.terminaux_complets()))))
@@ -262,11 +257,7 @@ class SteinerGraphe:
                     graph.remove_node(node)
                 change = True
         # self.draw_sousgraph(graph)
-        weight = 0
-        for _, _, data in sorted(graph.edges(data=True), key=lambda x: x[2]['weight']):
-            weight += data['weight']
-        # print(weight)
-        return graph, weight
+        return graph, self.weight(graph)
 
     # Randomisation des heuristiques de construction 2.3
     def graph_to_individu(self, graph):
@@ -403,7 +394,7 @@ for i in range(1, 19):
     fin = time.clock()
     f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
 f.close()
-
+"""
 f = open('resultC', 'a')
 for i in range(1, 21):
     name = ""
@@ -525,7 +516,7 @@ for i in range(1, 21):
 f.close()
 
 f = open('resultE', 'a')
-for i in range(1, 19):
+for i in range(1, 21):
     name = ""
     if i < 10:
         name = "E/e0" + str(i) + ".stp"
@@ -583,3 +574,4 @@ for i in range(1, 19):
     fin = time.clock()
     f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
 f.close()
+"""
