@@ -68,19 +68,24 @@ class SteinerGraphe:
     # 1.2 Fitness
     def fitness(self, chaine):
         if len(self.free) != len(chaine):
-            print(self.free)
-            print(chaine)
             raise Exception('Codedage invalide')
+        new = nx.Graph()
+        weight = 0
+        new.add_nodes_from(self.terminaux)
         # Kruskal procedure
-        graph = self.graph.copy()
-        for i in range(len(self.free)):
-            if chaine[i] == 0:
-                graph.remove_node(self.free[i])
-        self.couvrant(graph)
-        if nx.algorithms.components.is_connected(graph):  # connexe
-            return graph, self.weight(graph), True
+        for a, b, data in sorted(self.graph.edges(data=True), key=lambda x: x[2]['weight']):
+            if not ((a in self.free and chaine[self.free.index(a)] == 0) or (b in self.free and chaine[self.free.index(b)] == 0)):
+                new.add_edge(a, b, weight=data['weight'])
+                weight += data['weight']
+            if nx.algorithms.cycles.cycle_basis(new):
+                new.remove_edge(a, b)
+                weight -= data['weight']
+            if nx.algorithms.components.is_connected(new):  # connexe
+                return new, weight, True
+        if nx.algorithms.components.is_connected(new):  # connexe
+            return new, self.weight(new), True
         else:
-            return graph, self.weight(graph) + M * (graph.number_of_nodes() - 1 - graph.number_of_edges()), False
+            return new, self.weight(new) + M * (new.number_of_nodes() - 1 - new.number_of_edges()), False
 
     def draw(self):
         dict = {}
@@ -118,21 +123,27 @@ class SteinerGraphe:
                 for j in range(len(self.free)):
                     individu.append(1) if random.random() < P else individu.append(0)
             population.append(individu)
+        i1 = self.graph_to_individu(self.heuristic_PCC()[0])
+        i2 = self.graph_to_individu(self.heuristic_cover_min()[0])
+        if i1 not in population:
+            population.append(i1)
+        if i2 not in population:
+            population.append(i2)
         self.population = self.population_sorted(population)
         if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
             self.population = self.population_sorted([[1 for i in range(len(self.free))]])
         return self.population
 
-    def new_generation(self, parent=False, type=False):
+    def new_generation(self, parent=False, typeSelection=False):
         """
         :param parent: True for best parents, False for selection by probability
-        :param type: True for Elitist, False for Generational
+        :param typeSelection: True for Elitist, False for Generational
         """
         old_pop = []
         best_score = self.population[0][1]
         for i in self.population:
             if not parent:  # meilleurs parents
-                if i[1] <= self.population[0][1]:
+                if i[1] <= best_score:
                     old_pop.append(i[0])
             else:
                 note = float(best_score) / i[1]
@@ -150,7 +161,7 @@ class SteinerGraphe:
                     child = croisement_point(old_pop[i], old_pop[j])
                     if child not in new_pop:
                         new_pop.append(child)
-        if not type:  # generational
+        if not typeSelection:  # generational
             self.population = self.population_sorted(new_pop)
             if len(self.population) == 0:
                 self.population = self.population_sorted(old_pop)
@@ -172,18 +183,18 @@ class SteinerGraphe:
                 self.population = self.population_sorted(old_pop)
         return self.population
 
-    def algorithm_genetic(self, parent=False, type=False):
+    def algorithm_genetic(self, parent=False, typeSelection=False):
         self.generate()
         old_pop = self.population
-        print(old_pop)
+        # print(old_pop)
         old_score = old_pop[0][1]
-        new_pop = self.new_generation(parent=parent, type=type)
-        print(new_pop)
+        new_pop = self.new_generation(parent=parent, typeSelection=typeSelection)
+        # print(new_pop)
         new_score = new_pop[0][1]
         while old_score == new_score:
             old_score = new_score
             for i in range(K):
-                new_pop = self.new_generation(parent=parent, type=type)
+                new_pop = self.new_generation(parent=parent, typeSelection=typeSelection)
                 new_score = new_pop[0][1]
                 # print(new_pop)
             if old_score == new_score:
@@ -191,9 +202,9 @@ class SteinerGraphe:
         while old_score != new_score:
             old_score = new_score
             for i in range(K):
-                new_pop = self.new_generation(parent=parent, type=type)
+                new_pop = self.new_generation(parent=parent, typeSelection=typeSelection)
                 new_score = new_pop[0][1]
-        self.draw_individu(new_pop[0][0])
+        # self.draw_individu(new_pop[0][0])
         return new_pop[0]
 
     def draw_individu(self, individu):
@@ -233,9 +244,13 @@ class SteinerGraphe:
         return new
 
     def eliminate(self, graph):  # 2.1.5
-        for node in graph.nodes:
-            if node in self.free and graph.degree(node) == 1:
-                graph.remove_node(node)
+        change = True
+        while change:
+            change = False
+            for node in graph.nodes:
+                if node in self.free and graph.degree(node) == 1:
+                    graph.remove_node(node)
+                    change = True
         # self.draw_sousgraph(graph)
         return graph, self.weight(graph)
 
@@ -298,7 +313,23 @@ class SteinerGraphe:
         self.population = self.population_sorted(population)
         if len(self.population) == 0:  # pour etre sur d'avoir une solution realisable
             self.population = self.population_sorted([[1 for i in range(len(self.free))]])
-        return self.population[0]
+        old_pop = self.population
+        old_score = old_pop[0][1]
+        new_pop = self.new_generation(parent=True, typeSelection=True)
+        new_score = new_pop[0][1]
+        while old_score == new_score:
+            old_score = new_score
+            for i in range(K):
+                new_pop = self.new_generation(parent=True, typeSelection=True)
+                new_score = new_pop[0][1]
+            if old_score == new_score:
+                break
+        while old_score != new_score:
+            old_score = new_score
+            for i in range(K):
+                new_pop = self.new_generation(parent=True, typeSelection=True)
+                new_score = new_pop[0][1]
+        return new_pop[0]
 
     # 3. Recherche locale
     def recherche_locale(self):
@@ -337,7 +368,8 @@ class SteinerGraphe:
 
 f = open('resultB', 'a')
 for i in range(1, 19):
-    name = ""
+    r = 10
+    name = "test.gr"
     if i < 10:
         name = "B/b0" + str(i) + ".stp"
     else:
@@ -346,37 +378,6 @@ for i in range(1, 19):
     f.write(name + " :\n")
     g, t = readfile(name)
     sg = SteinerGraphe(g, t)
-    v1, t1 = [], []
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    f.write(
-        "\tGEN\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
     deb = time.clock()
     v = sg.heuristic_PCC()[1]
     fin = time.clock()
@@ -386,49 +387,40 @@ for i in range(1, 19):
     fin = time.clock()
     f.write("\tCM\t" + str(v) + "\t" + str(fin - deb) + "\n")
     deb = time.clock()
-    v = sg.generate_randomisation()[1]
-    fin = time.clock()
-    f.write("\tRAN\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.recherche_locale()[1]
-    fin = time.clock()
-    f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-f.close()
-"""
-f = open('resultC', 'a')
-for i in range(1, 21):
-    name = ""
-    if i < 10:
-        name = "C/c0" + str(i) + ".stp"
-    else:
-        name = "C/c" + str(i) + ".stp"
-    print(name)
-    f.write(name + " :\n")
-    g, t = readfile(name)
-    sg = SteinerGraphe(g, t)
     v1, t1 = [], []
-    for j in range(10):
+    for j in range(r):
         print(j)
         deb = time.clock()
         v = sg.algorithm_genetic(True, True)[1]
         fin = time.clock()
         v1.append(v)
         t1.append(fin - deb)
-    for j in range(10):
+    f.write(
+        "\tGEN\tBP-E\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
+    v1, t1 = [], []
+    for j in range(r):
         print(j)
         deb = time.clock()
         v = sg.algorithm_genetic(True, False)[1]
         fin = time.clock()
         v1.append(v)
         t1.append(fin - deb)
-    for j in range(10):
+    f.write(
+        "\tGEN\tBP-G\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(
+            np.mean(t1)) + "\n")
+    v1, t1 = [], []
+    for j in range(r):
         print(j)
         deb = time.clock()
         v = sg.algorithm_genetic(False, True)[1]
         fin = time.clock()
         v1.append(v)
         t1.append(fin - deb)
-    for j in range(10):
+    f.write(
+        "\tGEN\tMP-E\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(
+            np.mean(t1)) + "\n")
+    v1, t1 = [], []
+    for j in range(r):
         print(j)
         deb = time.clock()
         v = sg.algorithm_genetic(False, False)[1]
@@ -436,16 +428,7 @@ for i in range(1, 21):
         v1.append(v)
         t1.append(fin - deb)
     f.write(
-        "\tGEN\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_PCC()[1]
-    fin = time.clock()
-    f.write("\tPCC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_cover_min()[1]
-    fin = time.clock()
-    f.write("\tCM\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
+        "\tGEN\tMP-G\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
     v = sg.generate_randomisation()[1]
     fin = time.clock()
     f.write("\tRAN\t" + str(v) + "\t" + str(fin - deb) + "\n")
@@ -454,124 +437,3 @@ for i in range(1, 21):
     fin = time.clock()
     f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
 f.close()
-
-f = open('resultD', 'a')
-for i in range(1, 21):
-    name = ""
-    if i < 10:
-        name = "D/d0" + str(i) + ".stp"
-    else:
-        name = "D/d" + str(i) + ".stp"
-    print(name)
-    f.write(name + " :\n")
-    g, t = readfile(name)
-    sg = SteinerGraphe(g, t)
-    v1, t1 = [], []
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    f.write(
-        "\tGEN\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_PCC()[1]
-    fin = time.clock()
-    f.write("\tPCC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_cover_min()[1]
-    fin = time.clock()
-    f.write("\tCM\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.generate_randomisation()[1]
-    fin = time.clock()
-    f.write("\tRAN\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.recherche_locale()[1]
-    fin = time.clock()
-    f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-f.close()
-
-f = open('resultE', 'a')
-for i in range(1, 21):
-    name = ""
-    if i < 10:
-        name = "E/e0" + str(i) + ".stp"
-    else:
-        name = "E/e" + str(i) + ".stp"
-    print(name)
-    f.write(name + " :\n")
-    g, t = readfile(name)
-    sg = SteinerGraphe(g, t)
-    v1, t1 = [], []
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(True, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, True)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    for j in range(10):
-        print(j)
-        deb = time.clock()
-        v = sg.algorithm_genetic(False, False)[1]
-        fin = time.clock()
-        v1.append(v)
-        t1.append(fin - deb)
-    f.write(
-        "\tGEN\t" + str(np.mean(v1)) + "\t" + str(np.var(v1)) + "\t" + str(np.std(v1)) + "\t" + str(np.mean(t1)) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_PCC()[1]
-    fin = time.clock()
-    f.write("\tPCC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.heuristic_cover_min()[1]
-    fin = time.clock()
-    f.write("\tCM\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.generate_randomisation()[1]
-    fin = time.clock()
-    f.write("\tRAN\t" + str(v) + "\t" + str(fin - deb) + "\n")
-    deb = time.clock()
-    v = sg.recherche_locale()[1]
-    fin = time.clock()
-    f.write("\tLOC\t" + str(v) + "\t" + str(fin - deb) + "\n")
-f.close()
-"""
