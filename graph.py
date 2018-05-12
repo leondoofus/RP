@@ -166,9 +166,9 @@ class SteinerGraphe:
                     if child not in new_pop:
                         new_pop.append(child)
         if not typeSelection:  # generational
-            self.population = self.population_sorted(new_pop)
-            if len(self.population) == 0:
-                self.population = self.population_sorted(old_pop)
+            pop = self.population_sorted(new_pop)
+            if len(pop) > 0 and pop[0][1] <= self.population[0][1]:
+                self.population = self.population_sorted(new_pop)
         else:  # elitist
             new_pop_score = self.population_sorted(new_pop)
             best_score = min(self.population[0][1], new_pop_score[0][1]) if len(new_pop_score) > 0 else \
