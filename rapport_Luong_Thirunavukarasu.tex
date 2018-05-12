@@ -1,0 +1,107 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[francais]{babel}
+\usepackage[colorlinks=true,linkcolor=black,linktoc=all]{hyperref}
+\usepackage[linesnumbered, ruled, french,onelanguage]{algorithm2e}
+\usepackage{graphicx}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{colortbl}
+\setlength{\parindent}{0pt}
+\newcommand\tab[1][0.65cm]{\hspace*{#1}}
+\SetKwRepeat{Do}{faire}{tant que}
+
+\begin{document}
+\begin{titlepage}
+	\centering
+	\includegraphics[width=0.5\textwidth]{SU.jpg}\par\vspace{1cm}
+	{\scshape\LARGE Sorbonne Université\\ Faculté des Sciences et Ingénierie \par}
+	\vspace{1cm}
+	{\scshape\large Master d'informatique \par}
+	\vspace{1cm}
+	{\scshape\Large 4I201 - Résolution de problèmes\par}
+	\vspace{1.5cm}
+	{\huge\bfseries Rapport du projet :\\
+		Métaheuristiques pour la résolution du
+		problème de l’arbre de Steiner de poids minimum\par}
+	\vspace{2cm}
+	{\Large\itshape B. Thanh Luong, 3504859 \\      Hans Thirunavukarasu, 3605592\par}
+	\vfill
+	Encadrant :\par
+	M. Thibaut Lust
+	\vfill
+
+% Bottom of the page
+	{\large mai 2017\par}
+\end{titlepage}
+\newpage
+\tableofcontents
+\newpage
+\section{Introduction}
+Le problème de l’arbre de Steiner de poids minimum est NP-difficile. Étant donné un graphe connexe G = (V, E) et un ensemble T des sommets dits terminaux, nous allons chercher un ensemble des sommets non terminaux qui relient des sommets terminaux créant un arbre couvrant de poids minimum.\\
+L'objectif de ce projet est d'utiliser 3 approches qui résolvent le problème en temps polynomial: un algorithme génétique, une heuristique de construction et une recherche locale.\\
+L'algorithme génétique a été conçu de manière générale et aléatoire afin d'avoir une population variée des individus différents. Grâce à la variation de la population et 
+aux différentes méthodes de génération d'une nouvelle population à chaque étape, la convergence vers un optimum local est rapide.\\
+Nous allons utiliser deux heuristiques qui sont le plus court chemin et l'arbre couvrant minimum pour améliorer l'approche de problème.\\
+Enfin, la recherche locale sera utilisé pour avoir une perspective globale de problème.
+Nous testerons nos algorithmes sur des instances des ensembles B, C, D, et E disponibles à \hyperlink{http://steinlib.zib.de/testset.php}{http://steinlib.zib.de/testset.php}.
+\section{Algorithme génétique}
+\subsection{Population initiale}
+N'importe quel individu (réalisable ou non réalisable) est codé par un vecteur binaire pour chaque sommet non-terminal, prenant 1 si le sommet est présent dans le graphe (ou la forêt dans le cas non réalisable) et 0 sinon.\\
+La première phase consiste à construire une population aléatoire dont les individus ayant chaque bit une probabilité entre 0.2 et 0.5 d'être pris.\\
+Ensuite, nous allons construire des générations suivantes à partir de la population initiale. Nous proposons 2 types de sélection des parents de la population courante ainsi que 2 stratégies de remplacement de population.\\
+\textbf{Sélection des parents : }Parmi des individus, le moyen simple est de choisir celui qui a le meilleur score. Nous proposons une deuxième façon c'est pour chaque individu, nous le prenons comme parent si un tirage aléatoire est inférieur au ratio $\frac{best\ score}{son\ score}$.\\
+\textbf{Production des enfants : } S'il y a un unique parent choisi, pour chaque bit, une probabilité entre 0.01 et 0.04 de le changer de 0 à 1 et inversement. Sinon nous faisons une opérateur de croisement, pour chaque pair de parents, nous utilisons le croisement au milieu pour reproduire deux enfants.\\
+\textbf{Remplacement de population : } Le remplacement générationnel est d'écraser complètement la population courante par la nouvelle. Le remplacement élitiste est la sélection des meilleurs individus parmi les parents et les enfants avec une probabilité comme la sélection des parents. \\\\
+Après avoir testé toutes les combinaisons des processus possibles, nous constatons que la convergence vers le minimum des croisements est très lente et aussi loin de l'optimum des problème. Nous allons rajouter dans la population initiale 2 individus spéciales qui sont les résultats des heuristiques du plus court chemin et de l'arbre couvrant minimum. Ces 2 individus sont pour but d'accélérer la convergence.
+\subsection{Heuristique du plus court chemin}
+Cette heuristique donne une des meilleurs approches dans la population initiale. Elle consiste à la construction un graphe complet des sommets terminaux. Si deux sommets terminaux ne sont pas connecter le coût de l'arête connectant deux sommets est égale au plus court chemin entre ces deux dans le graphe initiale. Une fois le graphe complet est fait, nous remplaçons toutes les arêtes "virtuelles" par le chemin réel, puis construire un arbre couvrant minimum tous les sommets du graphe et enfin enlever toutes les feuilles redondantes (i.e. les sommets non-terminaux de degré 1).\\
+Cette heuristique est 2 - $\frac{2}{|T|}$ - OPT.
+\subsection{Heuristique de l'arbre couvrant minimum}
+Cette heuristique est moins efficace que celle du plus court chemin mais donne aussi une solution assez proche de l'optimum. Nous construisons l'arbre couvrant minimum de problème, puis la récursions est faite jusqu'à ce que l'on ne puisse plus enlever les feuilles redondantes.
+\subsection{Diversification la population initiale par randomiser des heuristiques de construction}
+La population aléatoire n'est pas efficace pour converger vers l'optimum. On converge très souvent vers celui du plus court chemin.\\
+De ce fait, les individus aléatoires seront remplacés par ceux des deux heuristiques proposées en perturbant le poids des arêtes. C'est-à-dire, une nouvelle instance de l'arbre sera crée en changeant le poids associé aux arêtes de -0.2 à -0.05 ou de 0.05 à 0.2. Quand nous obtenons le résultat des heuristiques, nous reviendrons vers le problème initial des nouvelles instance.
+\section{Recherche locale}
+En partant de la population initiale générée par les heuristiques la randomisation des heuristiques des constructions, nous allons faire une recherche locale suivante :\\
+\begin{algorithm}[H]
+	\caption{Recherche locale}
+	\KwData{I : Meilleur individu de la population initiale}
+	\KwResult{Résultat de la recherche locale}
+	\Do{Non convergence}{
+		Voisinage $\gets$ [ ]\\
+		\For{arête A $\in$ non-terminaux}{
+			\eIf{A prise dans I}{
+				\eIf{degré(A) = 1}{
+					Nouveau voisin = I avec A non prise\\
+					Voisinage = Voisinage $\cup$ \{ Nouveau voisin\}
+					}
+					{Nouveau voisin = I avec A non prise\\
+					\If{Nouveau voisin connexe}{Voisinage = Voisinage $\cup$ \{ Nouveau voisin\}}}
+			}{Nouveau voisin = I avec A prise\\
+			\If{Nouveau voisin connexe}{Voisinage = Voisinage $\cup$ \{ Nouveau voisin\}}}
+		}
+		\eIf{Meilleur candidat du voisinage a un meilleur score que I}{I $\gets$ Meilleur candidat du voisinage\\
+			Non convergence}
+		{\Return I}
+	}
+\end{algorithm}
+
+\section{Analyse des résultats}
+
+\begin{center}
+	\begin{tabular}{l|l|l|l|l|l}
+		instance-OPT & Algorithme & Résultat & Variance & Écate-type & Temps d'exécution\\ \hline \hline
+		b01 - \textbf{82}&PCC&82&&&0.01208\\
+		&CM&89&&&0.00199\\
+		&BP-E&82.0&0.0&0.0&0.14297\\
+		&BP-G&83.1&0.88999&0.94339&1.3402715\\
+		&MP-E&82.0&0.0&0.0&0.9216559\\
+		&MP-G&82.0&0.0&0.0&0.49829\\
+		&RAN&82&&&0.60108\\
+		&LOC&82&&&0.26112\\
+		 \hline
+	\end{tabular}
+\end{center}
+
+\section{Conclusion}
+\end{document}
