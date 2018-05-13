@@ -387,8 +387,8 @@ class SteinerGraphe:
         return individu, score
 
 
-f = open('resultB', 'a')
 for i in range(1, 19):
+    f = open('resultB', 'a')
     r = 10
     name = ""
     if i < 10:
@@ -407,7 +407,6 @@ for i in range(1, 19):
     v = sg.heuristic_cover_min()[1]
     fin = time.clock()
     f.write("&CM&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
-    deb = time.clock()
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -437,7 +436,7 @@ for i in range(1, 19):
         t1.append(fin - deb)
     f.write(
         "&MP-E&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
-            float(("%0.5f" % np.mean(t1)))) + "\\\\")
+            float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -448,6 +447,7 @@ for i in range(1, 19):
     f.write(
         "&MP-G&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
             float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
+    deb = time.clock()
     v = sg.generate_randomisation()[1]
     fin = time.clock()
     f.write("&RAN&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
@@ -455,10 +455,11 @@ for i in range(1, 19):
     v = sg.recherche_locale()[1]
     fin = time.clock()
     f.write("&LOC&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\hline\n")
-f.close()
+    f.close()
 
-f = open('resultC', 'a')
+
 for i in range(1, 21):
+    f = open('resultC', 'a')
     r = 10
     name = ""
     if i < 10:
@@ -477,7 +478,7 @@ for i in range(1, 21):
     v = sg.heuristic_cover_min()[1]
     fin = time.clock()
     f.write("&CM&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
-    deb = time.clock()
+    """
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -507,7 +508,7 @@ for i in range(1, 21):
         t1.append(fin - deb)
     f.write(
         "&MP-E&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
-            float(("%0.5f" % np.mean(t1)))) + "\\\\")
+            float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -518,6 +519,8 @@ for i in range(1, 21):
     f.write(
         "&MP-G&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
             float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
+    """
+    deb = time.clock()
     v = sg.generate_randomisation()[1]
     fin = time.clock()
     f.write("&RAN&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
@@ -525,10 +528,11 @@ for i in range(1, 21):
     v = sg.recherche_locale()[1]
     fin = time.clock()
     f.write("&LOC&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\hline\n")
-f.close()
+    f.close()
 
-f = open('resultD', 'a')
+
 for i in range(1, 21):
+    f = open('resultD', 'a')
     r = 10
     name = ""
     if i < 10:
@@ -547,7 +551,7 @@ for i in range(1, 21):
     v = sg.heuristic_cover_min()[1]
     fin = time.clock()
     f.write("&CM&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
-    deb = time.clock()
+    """
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -577,7 +581,7 @@ for i in range(1, 21):
         t1.append(fin - deb)
     f.write(
         "&MP-E&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
-            float(("%0.5f" % np.mean(t1)))) + "\\\\")
+            float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -588,6 +592,8 @@ for i in range(1, 21):
     f.write(
         "&MP-G&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
             float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
+    """
+    deb = time.clock()
     v = sg.generate_randomisation()[1]
     fin = time.clock()
     f.write("&RAN&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
@@ -595,10 +601,11 @@ for i in range(1, 21):
     v = sg.recherche_locale()[1]
     fin = time.clock()
     f.write("&LOC&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\hline\n")
-f.close()
+    f.close()
 
-f = open('resultE', 'a')
+
 for i in range(1, 21):
+    f = open('resultE', 'a')
     r = 10
     name = ""
     if i < 10:
@@ -617,7 +624,7 @@ for i in range(1, 21):
     v = sg.heuristic_cover_min()[1]
     fin = time.clock()
     f.write("&CM&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
-    deb = time.clock()
+    """
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -647,7 +654,7 @@ for i in range(1, 21):
         t1.append(fin - deb)
     f.write(
         "&MP-E&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
-            float(("%0.5f" % np.mean(t1)))) + "\\\\")
+            float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
     v1, t1 = [], []
     for j in range(r):
         deb = time.clock()
@@ -658,6 +665,8 @@ for i in range(1, 21):
     f.write(
         "&MP-G&" + str(np.mean(v1)) + "&" + str(float(("%0.5f" % np.var(v1)))) + "&" + str(float(("%0.5f" % np.std(v1)))) + "&" + str(
             float(("%0.5f" % np.mean(t1)))) + "\\\\\n")
+    """
+    deb = time.clock()
     v = sg.generate_randomisation()[1]
     fin = time.clock()
     f.write("&RAN&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\n")
@@ -665,4 +674,4 @@ for i in range(1, 21):
     v = sg.recherche_locale()[1]
     fin = time.clock()
     f.write("&LOC&" + str(v) + "&&&" + str(float(("%0.5f" % (fin - deb)))) + "\\\\\hline\n")
-f.close()
+    f.close()
